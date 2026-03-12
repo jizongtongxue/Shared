@@ -22,6 +22,7 @@ model Post {
   id        Int      @id @default(autoincrement())
   content   String
   imageUrl  String?
+  videoUrl  String?  // Add this line for video URLs
   createdAt DateTime @default(now())
   
   userId    Int

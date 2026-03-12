@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { content, imageUrl, userId } = await request.json()
+    const { content, imageUrl, videoUrl, userId } = await request.json()
     
     if (!userId || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       data: {
         content,
         imageUrl,
+        videoUrl,
         userId: parseInt(userId)
       }
     })

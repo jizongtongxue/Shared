@@ -7,6 +7,7 @@ interface Post {
   id: number
   content: string
   imageUrl?: string
+  videoUrl?: string
   createdAt: string
   user: {
     name: string
@@ -51,9 +52,9 @@ export default function Home() {
     
     setSubmitting(true)
     try {
-      let finalImageUrl = ''
-      
-      // Upload file if selected
+      let imageUrl: string | undefined = undefined
+      let videoUrl: string | undefined = undefined
+
       if (selectedFile) {
         const formData = new FormData()
         formData.append('file', selectedFile)
@@ -65,7 +66,11 @@ export default function Home() {
         
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json()
-          finalImageUrl = uploadData.url
+          if (selectedFile.type.startsWith('image/')) {
+            imageUrl = uploadData.url
+          } else if (selectedFile.type.startsWith('video/')) {
+            videoUrl = uploadData.url
+          }
         } else {
           throw new Error('Upload failed')
         }
@@ -74,13 +79,12 @@ export default function Home() {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, imageUrl: finalImageUrl, userId }),
+        body: JSON.stringify({ content, imageUrl, videoUrl, userId }),
       })
       
       if (res.ok) {
         setContent('')
         setSelectedFile(null)
-        // Reset file input value
         const fileInput = document.getElementById('fileInput') as HTMLInputElement
         if (fileInput) fileInput.value = ''
         fetchPosts()
@@ -117,7 +121,7 @@ export default function Home() {
             <input
               id="fileInput"
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   setSelectedFile(e.target.files[0])
@@ -152,7 +156,14 @@ export default function Home() {
         ) : (
           posts.map((post) => (
             <div key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 border border-stone-100">
-              {post.imageUrl && (
+              {post.videoUrl ? (
+                <div className="w-full bg-black">
+                  <video controls className="w-full h-auto max-h-[500px]">
+                    <source src={post.videoUrl} />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              ) : post.imageUrl && (
                 <div className="w-full bg-stone-100 cursor-pointer overflow-hidden" onClick={() => setPreviewImage(post.imageUrl!)}>
                   <img
                     src={post.imageUrl}
