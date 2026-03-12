@@ -157,7 +157,12 @@ export default function Home() {
             <div key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 border border-stone-100">
               {post.videoUrl ? (
                 <div className="w-full bg-black">
-                  <video controls className="w-full h-auto max-h-[500px]">
+                  <video 
+                    playsInline 
+                    muted 
+                    controls 
+                    className="w-full h-auto max-h-[500px]"
+                  >
                     <source src={post.videoUrl} />
                     Your browser does not support the video tag.
                   </video>
