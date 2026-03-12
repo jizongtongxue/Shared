@@ -10,8 +10,8 @@ export async function POST(request: Request) {
       }
     })
     return NextResponse.json(checkIn)
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to check in' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Check-in failed' }, { status: 500 })
   }
 }
 

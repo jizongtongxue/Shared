@@ -13,9 +13,9 @@ export async function generateRemindersForUser(userId: number) {
     })
 
     const context = {
-      crops: crops.map((c: any) => c.name).join(', '),
+      crops: crops.map((c) => c.name).join(', '),
       lastWatered: lastCheckIn ? lastCheckIn.createdAt : 'Never',
-      existingReminders: reminders.map((r: any) => r.content).join(', ')
+      existingReminders: reminders.map((r) => r.content).join(', ')
     }
 
     // 2. Call DeepSeek API (Simulated if no key)
@@ -63,7 +63,7 @@ export async function generateRemindersForUser(userId: number) {
       const cleanSuggestion = suggestion.replace(/^- /, '').trim() // clean bullet points
       
       // Check if similar reminder already exists
-      const isDuplicate = reminders.some((r: any) => r.content === cleanSuggestion)
+      const isDuplicate = reminders.some((r) => r.content === cleanSuggestion)
       
       if (!isDuplicate) {
         const r = await prisma.reminder.create({

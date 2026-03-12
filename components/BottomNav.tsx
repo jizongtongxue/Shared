@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Home, Sprout, User, LogIn, LogOut } from 'lucide-react'
+import { Home, Sprout, LogIn, LogOut } from 'lucide-react'
 
 export default function BottomNav() {
   const [userId, setUserId] = useState<string | null>(null)

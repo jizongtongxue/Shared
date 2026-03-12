@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       }
     })
     return NextResponse.json(crop)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to add crop' }, { status: 500 })
   }
 }
@@ -36,7 +36,7 @@ export async function DELETE(request: Request) {
     const { id } = await request.json()
     await prisma.crop.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to delete crop' }, { status: 500 })
   }
 }

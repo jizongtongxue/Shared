@@ -27,10 +27,7 @@ export async function POST(request: Request) {
     // In a real app, we would set a session cookie here.
     // For simplicity, we'll return the user object and store ID in localStorage on client.
     return NextResponse.json({ user })
-  } catch (error) {
-    return NextResponse.json(
-      { error: '登录失败' },
-      { status: 500 }
-    )
+  } catch {
+    return NextResponse.json({ error: '登录失败' }, { status: 500 })
   }
 }

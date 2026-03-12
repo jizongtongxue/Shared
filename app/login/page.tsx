@@ -29,7 +29,7 @@ export default function LoginPage() {
         const data = await res.json()
         setError(data.error || '登录失败')
       }
-    } catch (err) {
+    } catch {
       setError('发生错误，请重试')
     }
   }

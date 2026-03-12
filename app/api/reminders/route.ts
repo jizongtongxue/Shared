@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       }
     })
     return NextResponse.json(reminder)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to add reminder' }, { status: 500 })
   }
 }
@@ -39,7 +39,7 @@ export async function PUT(request: Request) {
       data: { isDone }
     })
     return NextResponse.json(reminder)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to update reminder' }, { status: 500 })
   }
 }

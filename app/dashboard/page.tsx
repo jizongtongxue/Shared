@@ -35,7 +35,7 @@ export default function Dashboard() {
     setUserId(uid)
     setUserName(uname)
     fetchData(uid)
-  }, [])
+  }, [router])
 
   const fetchData = async (uid: string) => {
     // Fetch Crops

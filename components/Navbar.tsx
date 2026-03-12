@@ -5,19 +5,22 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 export default function Navbar() {
-  const [userId, setUserId] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
-    setUserId(localStorage.getItem('userId'))
+    const timer = setTimeout(() => setIsMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
+
+  const userId = isMounted ? localStorage.getItem('userId') : null
 
   const handleLogout = () => {
     localStorage.removeItem('userId')
     localStorage.removeItem('userName')
-    setUserId(null)
     router.push('/')
+    router.refresh()
   }
 
   if (pathname === '/login') return null
