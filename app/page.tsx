@@ -17,6 +17,9 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   
   // New Post Form
   const [content, setContent] = useState('')
@@ -28,20 +31,36 @@ export default function Home() {
 
   useEffect(() => {
     setUserId(localStorage.getItem('userId'))
-    fetchPosts()
+    fetchPosts(1, true)
   }, [])
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (pageNum: number, isInitial: boolean = false) => {
+    if (isInitial) setLoading(true)
+    else setLoadingMore(true)
+
     try {
-      const res = await fetch('/api/posts')
+      const res = await fetch(`/api/posts?page=${pageNum}`)
       if (res.ok) {
         const data = await res.json()
-        setPosts(data)
+        if (isInitial) {
+          setPosts(data)
+        } else {
+          setPosts(prev => [...prev, ...data])
+        }
+        setHasMore(data.length === 20)
+        setPage(pageNum)
       }
     } catch (error) {
       console.error('Error fetching posts:', error)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchPosts(page + 1)
     }
   }
 
@@ -86,7 +105,8 @@ export default function Home() {
         setSelectedFile(null)
         const fileInput = document.getElementById('fileInput') as HTMLInputElement
         if (fileInput) fileInput.value = ''
-        fetchPosts()
+        // Reset to first page on new post
+        fetchPosts(1, true)
       }
     } catch (error) {
       console.error('Error creating post:', error)
@@ -192,6 +212,20 @@ export default function Home() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {hasMore && (
+        <div className="flex justify-center pb-8">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="bg-white border border-green-600 text-green-600 px-8 py-2 rounded-full hover:bg-green-50 transition-colors disabled:opacity-50"
+          >
+            {loadingMore ? '加载中...' : '加载更多'}
+          </button>
+        </div>
+      )}
+
       {/* Image Preview Modal */}
       {previewImage && (
         <div 

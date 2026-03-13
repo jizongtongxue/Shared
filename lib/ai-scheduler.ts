@@ -86,11 +86,23 @@ export async function generateRemindersForUser(userId: number) {
 export async function runDailyJob() {
   console.log('Running daily AI analysis job...')
   try {
-    const users = await prisma.user.findMany()
-    console.log(`Found ${users.length} users to process.`)
+    const BATCH_SIZE = 10 // Process 10 users at a time to save memory
+    let skip = 0
     
-    for (const user of users) {
-      await generateRemindersForUser(user.id)
+    while (true) {
+      const users = await prisma.user.findMany({
+        skip,
+        take: BATCH_SIZE
+      })
+      
+      if (users.length === 0) break
+      
+      console.log(`Processing batch: ${skip} to ${skip + users.length}...`)
+      for (const user of users) {
+        await generateRemindersForUser(user.id)
+      }
+      
+      skip += BATCH_SIZE
     }
     console.log('Daily job completed.')
   } catch (error) {
