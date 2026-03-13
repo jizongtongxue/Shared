@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
+import { Readable } from 'stream'
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,21 +17,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
+    // Optimization: Stream file instead of loading entire buffer into memory
     const result = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
+      const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: 'auto',
+          folder: 'shared-garden', // Optional: keep things organized
         },
         (error, result) => {
           if (error) {
+            console.error('Cloudinary upload error:', error)
             reject(error)
+          } else {
+            resolve(result)
           }
-          resolve(result)
         }
-      ).end(buffer)
+      )
+
+      // Convert Web ReadableStream to Node.js Readable stream
+      const reader = file.stream().getReader()
+      const nodeStream = new Readable({
+        async read() {
+          const { done, value } = await reader.read()
+          if (done) {
+            this.push(null)
+          } else {
+            this.push(Buffer.from(value))
+          }
+        }
+      })
+
+      nodeStream.pipe(uploadStream)
     })
 
     return NextResponse.json({ url: (result as any).secure_url })
