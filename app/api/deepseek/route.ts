@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { generateRemindersForUser } from '@/lib/ai-scheduler'
+import { generateGlobalReminders } from '@/lib/ai-scheduler'
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const { userId } = await request.json()
-    const uid = parseInt(userId)
-
-    const createdReminders = await generateRemindersForUser(uid)
+    const createdReminders = await generateGlobalReminders()
 
     return NextResponse.json({ success: true, added: createdReminders })
   } catch (error) {

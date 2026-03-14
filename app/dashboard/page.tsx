@@ -7,6 +7,9 @@ interface Crop {
   id: number
   name: string
   status: string
+  user: {
+    name: string
+  }
 }
 
 interface Reminder {
@@ -15,12 +18,20 @@ interface Reminder {
   isDone: boolean
 }
 
+interface CheckIn {
+  id: number
+  createdAt: string
+  user: {
+    name: string
+  }
+}
+
 export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string | null>(null)
   const [crops, setCrops] = useState<Crop[]>([])
   const [reminders, setReminders] = useState<Reminder[]>([])
-  const [lastCheckIn, setLastCheckIn] = useState<string | null>(null)
+  const [lastCheckIn, setLastCheckIn] = useState<CheckIn | null>(null)
   const [newCrop, setNewCrop] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const router = useRouter()
@@ -34,18 +45,16 @@ export default function Dashboard() {
     }
     setUserId(uid)
     setUserName(uname)
-    fetchData(uid)
+    fetchData()
   }, [router])
 
-  const fetchData = async (uid: string) => {
-    // Fetch Crops
-    fetch(`/api/crops?userId=${uid}`).then(r => r.json()).then(setCrops)
-    // Fetch Reminders
-    fetch(`/api/reminders?userId=${uid}`).then(r => r.json()).then(setReminders)
-    // Fetch Last CheckIn
-    fetch(`/api/checkin?userId=${uid}`).then(r => r.json()).then(data => {
-      if (data && data.createdAt) setLastCheckIn(data.createdAt)
-    })
+  const fetchData = async () => {
+    // Fetch Crops (Global)
+    fetch(`/api/crops`).then(r => r.json()).then(setCrops)
+    // Fetch Reminders (Global)
+    fetch(`/api/reminders`).then(r => r.json()).then(setReminders)
+    // Fetch Last CheckIn (Global)
+    fetch(`/api/checkin`).then(r => r.json()).then(setLastCheckIn)
   }
 
   const handleAddCrop = async (e: React.FormEvent) => {
@@ -57,7 +66,7 @@ export default function Dashboard() {
     })
     if (res.ok) {
       setNewCrop('')
-      fetchData(userId)
+      fetchData()
     }
   }
 
@@ -68,23 +77,20 @@ export default function Dashboard() {
       body: JSON.stringify({ userId })
     })
     if (res.ok) {
-      const data = await res.json()
-      setLastCheckIn(data.createdAt)
+      fetchData()
       // Trigger AI analysis automatically on check-in
       triggerAI()
     }
   }
 
   const triggerAI = async () => {
-    if (!userId) return
     setAiLoading(true)
     try {
       const res = await fetch('/api/deepseek', {
-        method: 'POST',
-        body: JSON.stringify({ userId })
+        method: 'POST'
       })
       if (res.ok) {
-        fetchData(userId)
+        fetchData()
       }
     } finally {
       setAiLoading(false)
@@ -96,7 +102,7 @@ export default function Dashboard() {
       method: 'PUT',
       body: JSON.stringify({ id, isDone: !current })
     })
-    if (userId) fetchData(userId)
+    fetchData()
   }
 
   const deleteCrop = async (id: number) => {
@@ -104,7 +110,7 @@ export default function Dashboard() {
       method: 'DELETE',
       body: JSON.stringify({ id })
     })
-    if (userId) fetchData(userId)
+    fetchData()
   }
 
   if (!userId) return null
@@ -114,7 +120,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">你好, {userName}</h1>
-          <p className="text-gray-500">管理你的私人菜地</p>
+          <p className="text-gray-500">管理村里的共享菜园</p>
         </div>
         <div className="text-right">
           <button
@@ -124,7 +130,10 @@ export default function Dashboard() {
             💧 浇水打卡
           </button>
           {lastCheckIn && (
-            <p className="text-xs text-gray-400 mt-2">上次打卡: {new Date(lastCheckIn).toLocaleString()}</p>
+            <div className="mt-2">
+              <p className="text-xs text-gray-400">上次打卡: {new Date(lastCheckIn.createdAt).toLocaleString()}</p>
+              <p className="text-[10px] text-blue-400">打卡人: {lastCheckIn.user.name}</p>
+            </div>
           )}
         </div>
       </div>
@@ -132,11 +141,14 @@ export default function Dashboard() {
       <div className="grid md:grid-cols-2 gap-8">
         {/* Crops Section */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
-          <h2 className="text-xl font-semibold mb-4 text-green-800">我的作物</h2>
+          <h2 className="text-xl font-semibold mb-4 text-green-800">共享作物</h2>
           <ul className="space-y-3 mb-4">
             {crops.map(crop => (
               <li key={crop.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="font-medium text-green-900">{crop.name}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-green-900">{crop.name}</span>
+                  <span className="text-[10px] text-green-600/60">种植者: {crop.user.name}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs bg-white px-2 py-1 rounded border text-green-600">{crop.status}</span>
                   <button onClick={() => deleteCrop(crop.id)} className="text-red-400 hover:text-red-600">×</button>

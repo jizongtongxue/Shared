@@ -15,16 +15,13 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const userId = searchParams.get('userId')
-
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID required' }, { status: 400 })
-  }
-
+export async function GET() {
   const lastCheckIn = await prisma.checkIn.findFirst({
-    where: { userId: parseInt(userId) },
+    include: {
+      user: {
+        select: { name: true }
+      }
+    },
     orderBy: { createdAt: 'desc' }
   })
   

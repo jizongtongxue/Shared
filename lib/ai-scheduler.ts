@@ -1,15 +1,14 @@
 import prisma from './prisma'
 
-export async function generateRemindersForUser(userId: number) {
+export async function generateGlobalReminders() {
   try {
-    // 1. Gather Context
-    const crops = await prisma.crop.findMany({ where: { userId } })
+    // 1. Gather Context (Global)
+    const crops = await prisma.crop.findMany()
     const lastCheckIn = await prisma.checkIn.findFirst({ 
-      where: { userId },
       orderBy: { createdAt: 'desc' }
     })
     const reminders = await prisma.reminder.findMany({ 
-      where: { userId, isDone: false } 
+      where: { isDone: false } 
     })
 
     const context = {
@@ -34,7 +33,7 @@ export async function generateRemindersForUser(userId: number) {
           messages: [
             {
               role: "system",
-              content: "You are an expert gardener assistant. Based on the user's crops and watering history, generate 1-3 urgent short tasks/reminders in Chinese. Return only the tasks separated by newlines. No other text."
+              content: "You are an expert gardener assistant. Based on the shared garden's crops and watering history, generate 1-3 urgent short tasks/reminders in Chinese. Return only the tasks separated by newlines. No other text."
             },
             {
               role: "user",
@@ -56,20 +55,20 @@ export async function generateRemindersForUser(userId: number) {
       ]
     }
 
-    // 3. Save new reminders
+    // 3. Save new reminders (Global)
+    const firstUser = await prisma.user.findFirst()
+    if (!firstUser) return []
+
     const createdReminders = []
     for (const suggestion of suggestions) {
-      // Avoid duplicates roughly
-      const cleanSuggestion = suggestion.replace(/^- /, '').trim() // clean bullet points
-      
-      // Check if similar reminder already exists
+      const cleanSuggestion = suggestion.replace(/^- /, '').trim()
       const isDuplicate = reminders.some((r) => r.content === cleanSuggestion)
       
       if (!isDuplicate) {
         const r = await prisma.reminder.create({
           data: {
             content: cleanSuggestion,
-            userId
+            userId: firstUser.id // Link to first user as a placeholder for global
           }
         })
         createdReminders.push(r)
@@ -78,34 +77,17 @@ export async function generateRemindersForUser(userId: number) {
 
     return createdReminders
   } catch (error) {
-    console.error(`Error generating reminders for user ${userId}:`, error)
+    console.error(`Error generating global reminders:`, error)
     return []
   }
 }
 
 export async function runDailyJob() {
-  console.log('Running daily AI analysis job...')
+  console.log('Running daily global AI analysis job...')
   try {
-    const BATCH_SIZE = 10 // Process 10 users at a time to save memory
-    let skip = 0
-    
-    while (true) {
-      const users = await prisma.user.findMany({
-        skip,
-        take: BATCH_SIZE
-      })
-      
-      if (users.length === 0) break
-      
-      console.log(`Processing batch: ${skip} to ${skip + users.length}...`)
-      for (const user of users) {
-        await generateRemindersForUser(user.id)
-      }
-      
-      skip += BATCH_SIZE
-    }
-    console.log('Daily job completed.')
+    await generateGlobalReminders()
+    console.log('Daily global job completed.')
   } catch (error) {
-    console.error('Daily job failed:', error)
+    console.error('Daily global job failed:', error)
   }
 }
