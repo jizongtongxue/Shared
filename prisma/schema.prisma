@@ -7,10 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Garden {
+  id         Int        @id @default(autoincrement())
+  inviteCode String     @unique
+  name       String?
+  createdAt  DateTime   @default(now())
+  
+  users      User[]
+  posts      Post[]
+  crops      Crop[]
+  reminders  Reminder[]
+  checkIns   CheckIn[]
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
+  
+  gardenId  Int
+  garden    Garden   @relation(fields: [gardenId], references: [id])
   
   posts     Post[]
   crops     Crop[]
@@ -22,21 +38,27 @@ model Post {
   id        Int      @id @default(autoincrement())
   content   String
   imageUrl  String?
-  videoUrl  String?  // Add this line for video URLs
+  videoUrl  String?
   createdAt DateTime @default(now())
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
+  
+  gardenId  Int
+  garden    Garden   @relation(fields: [gardenId], references: [id])
 }
 
 model Crop {
   id        Int      @id @default(autoincrement())
   name      String
-  status    String   @default("Growing") // e.g., "Growing", "Ready"
+  status    String   @default("Growing")
   plantedAt DateTime @default(now())
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
+  
+  gardenId  Int
+  garden    Garden   @relation(fields: [gardenId], references: [id])
 }
 
 model Reminder {
@@ -44,9 +66,13 @@ model Reminder {
   content   String
   isDone    Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
+  
+  gardenId  Int
+  garden    Garden   @relation(fields: [gardenId], references: [id])
 }
 
 model CheckIn {
@@ -55,4 +81,7 @@ model CheckIn {
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
+  
+  gardenId  Int
+  garden    Garden   @relation(fields: [gardenId], references: [id])
 }

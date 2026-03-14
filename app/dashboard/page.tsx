@@ -49,12 +49,15 @@ export default function Dashboard() {
   }, [router])
 
   const fetchData = async () => {
-    // Fetch Crops (Global)
-    fetch(`/api/crops`).then(r => r.json()).then(setCrops)
-    // Fetch Reminders (Global)
-    fetch(`/api/reminders`).then(r => r.json()).then(setReminders)
-    // Fetch Last CheckIn (Global)
-    fetch(`/api/checkin`).then(r => r.json()).then(setLastCheckIn)
+    const gid = localStorage.getItem('gardenId')
+    if (!gid) return
+
+    // Fetch Crops (Garden Specific)
+    fetch(`/api/crops?gardenId=${gid}`).then(r => r.json()).then(setCrops)
+    // Fetch Reminders (Garden Specific)
+    fetch(`/api/reminders?gardenId=${gid}`).then(r => r.json()).then(setReminders)
+    // Fetch Last CheckIn (Garden Specific)
+    fetch(`/api/checkin?gardenId=${gid}`).then(r => r.json()).then(setLastCheckIn)
   }
 
   const handleAddCrop = async (e: React.FormEvent) => {

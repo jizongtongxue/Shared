@@ -24,6 +24,7 @@ export default function LoginPage() {
         const data = await res.json()
         localStorage.setItem('userId', data.user.id.toString())
         localStorage.setItem('userName', data.user.name)
+        localStorage.setItem('gardenId', data.user.gardenId.toString())
         router.push('/dashboard')
       } else {
         const data = await res.json()
@@ -61,7 +62,7 @@ export default function LoginPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 border p-2"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">提示: LAOXIANG666</p>
+            <p className="text-xs text-gray-500 mt-1">提示: 输入专属邀请码即可进入/创建您的菜园</p>
           </div>
 
           {error && <p className="text-red-500 text-sm">{error}</p>}

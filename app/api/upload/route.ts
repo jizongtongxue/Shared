@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       nodeStream.pipe(uploadStream)
     })
 
-    return NextResponse.json({ url: (result as any).secure_url })
+    return NextResponse.json({ url: (result as { secure_url: string }).secure_url })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })

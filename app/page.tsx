@@ -38,8 +38,11 @@ export default function Home() {
     if (isInitial) setLoading(true)
     else setLoadingMore(true)
 
+    const gid = localStorage.getItem('gardenId')
+    if (!gid) return
+
     try {
-      const res = await fetch(`/api/posts?page=${pageNum}`)
+      const res = await fetch(`/api/posts?page=${pageNum}&gardenId=${gid}`)
       if (res.ok) {
         const data = await res.json()
         if (isInitial) {
