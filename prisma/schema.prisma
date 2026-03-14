@@ -22,7 +22,7 @@ model Garden {
 
 model User {
   id        Int      @id @default(autoincrement())
-  name      String   @unique
+  name      String
   createdAt DateTime @default(now())
   
   gardenId  Int
@@ -32,6 +32,8 @@ model User {
   crops     Crop[]
   reminders Reminder[]
   checkIns  CheckIn[]
+
+  @@unique([name, gardenId])
 }
 
 model Post {
