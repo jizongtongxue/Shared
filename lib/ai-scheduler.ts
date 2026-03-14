@@ -11,11 +11,19 @@ export async function generateGardenReminders(gardenId: number) {
     const reminders = await prisma.reminder.findMany({ 
       where: { gardenId, isDone: false } 
     })
+    // Fetch last 5 posts to get recent garden activities/discussions
+    const recentPosts = await prisma.post.findMany({
+      where: { gardenId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { content: true, user: { select: { name: true } } }
+    })
 
     const context = {
       crops: crops.map((c) => c.name).join(', '),
       lastWatered: lastCheckIn ? lastCheckIn.createdAt : 'Never',
-      existingReminders: reminders.map((r) => r.content).join(', ')
+      existingReminders: reminders.map((r) => r.content).join(', '),
+      recentActivities: recentPosts.map(p => `${p.user.name}: ${p.content}`).join('; ')
     }
 
     // 2. Call DeepSeek API
@@ -33,11 +41,11 @@ export async function generateGardenReminders(gardenId: number) {
           messages: [
             {
               role: "system",
-              content: "You are an expert gardener assistant. Based on this specific garden's crops and watering history, generate 1-3 urgent short tasks in Chinese. Return only the tasks separated by newlines."
+              content: "You are an expert gardener assistant. Based on this specific garden's crops, watering history, and recent social updates (posts), generate 1-3 urgent short tasks in Chinese. Return only the tasks separated by newlines."
             },
             {
               role: "user",
-              content: `Crops: ${context.crops}. Last Watered: ${context.lastWatered}. Existing Tasks: ${context.existingReminders}.`
+              content: `Crops: ${context.crops}. Last Watered: ${context.lastWatered}. Existing Tasks: ${context.existingReminders}. Recent Posts: ${context.recentActivities}.`
             }
           ]
         })
