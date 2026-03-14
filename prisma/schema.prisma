@@ -39,7 +39,7 @@ model User {
 model Post {
   id        Int      @id @default(autoincrement())
   content   String
-  imageUrl  String?
+  imageUrls String[]
   videoUrl  String?
   createdAt DateTime @default(now())
   

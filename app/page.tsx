@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 interface Post {
   id: number
   content: string
-  imageUrl?: string
+  imageUrls: string[]
   videoUrl?: string
   createdAt: string
   user: {
@@ -35,7 +35,7 @@ export default function Home() {
   
   // New Post Form
   const [content, setContent] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   
   // Image Preview Modal
@@ -102,39 +102,41 @@ export default function Home() {
     
     setSubmitting(true)
     try {
-      let imageUrl: string | undefined = undefined
+      const imageUrls: string[] = []
       let videoUrl: string | undefined = undefined
 
-      if (selectedFile) {
-        const formData = new FormData()
-        formData.append('file', selectedFile)
-        
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        })
-        
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json()
-          if (selectedFile.type.startsWith('image/')) {
-            imageUrl = uploadData.url
-          } else if (selectedFile.type.startsWith('video/')) {
-            videoUrl = uploadData.url
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const formData = new FormData()
+          formData.append('file', file)
+          
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          })
+          
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json()
+            if (file.type.startsWith('image/')) {
+              imageUrls.push(uploadData.url)
+            } else if (file.type.startsWith('video/')) {
+              videoUrl = uploadData.url
+            }
+          } else {
+            throw new Error('Upload failed')
           }
-        } else {
-          throw new Error('Upload failed')
         }
       }
 
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, imageUrl, videoUrl, userId }),
+        body: JSON.stringify({ content, imageUrls, videoUrl, userId }),
       })
       
       if (res.ok) {
         setContent('')
-        setSelectedFile(null)
+        setSelectedFiles([])
         const fileInput = document.getElementById('fileInput') as HTMLInputElement
         if (fileInput) fileInput.value = ''
         // Reset to first page on new post
@@ -190,9 +192,16 @@ export default function Home() {
               id="fileInput"
               type="file"
               accept="image/*,video/*"
+              multiple
               onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setSelectedFile(e.target.files[0])
+                if (e.target.files) {
+                  const files = Array.from(e.target.files)
+                  if (files.length > 9) {
+                    alert('最多只能选择9张图片')
+                    e.target.value = ''
+                    return
+                  }
+                  setSelectedFiles(files)
                 }
               }}
               className="w-full text-sm text-gray-500
@@ -202,6 +211,9 @@ export default function Home() {
                 file:bg-green-50 file:text-green-700
                 hover:file:bg-green-100"
             />
+            {selectedFiles.length > 0 && (
+              <p className="text-xs text-gray-500">已选择 {selectedFiles.length} 个文件</p>
+            )}
             <div className="flex justify-end">
               <button
                 type="submit"
@@ -237,16 +249,29 @@ export default function Home() {
                     Your browser does not support the video tag.
                   </video>
                 </div>
-              ) : post.imageUrl && (
-                <div className="w-full bg-stone-100 cursor-pointer overflow-hidden" onClick={() => setPreviewImage(post.imageUrl!)}>
-                  <img
-                    src={post.imageUrl}
-                    alt="Post image"
-                    className="w-full h-auto max-h-[500px] object-contain mx-auto"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'
-                    }}
-                  />
+              ) : post.imageUrls && post.imageUrls.length > 0 && (
+                <div className={`grid gap-0.5 w-full bg-stone-100 ${
+                  post.imageUrls.length === 1 ? 'grid-cols-1' : 
+                  post.imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'
+                }`}>
+                  {post.imageUrls.map((url, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`relative cursor-pointer overflow-hidden aspect-square ${
+                        post.imageUrls.length === 1 ? 'aspect-auto max-h-[500px]' : ''
+                      }`}
+                      onClick={() => setPreviewImage(url)}
+                    >
+                      <img
+                        src={url}
+                        alt={`Post image ${idx + 1}`}
+                        className="w-full h-full object-cover mx-auto"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image'
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="p-5">

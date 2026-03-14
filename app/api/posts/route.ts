@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { content, imageUrl, videoUrl, userId } = await request.json()
+    const { content, imageUrls, videoUrl, userId } = await request.json()
     
     if (!userId || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const post = await prisma.post.create({
       data: {
         content,
-        imageUrl,
+        imageUrls: imageUrls || [],
         videoUrl,
         userId: user.id,
         gardenId: user.gardenId
