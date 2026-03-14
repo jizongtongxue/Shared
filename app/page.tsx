@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 interface Post {
   id: number
@@ -11,10 +11,22 @@ interface Post {
   user: {
     name: string
   }
+  garden: {
+    name: string
+    inviteCode: string
+  }
+}
+
+interface Garden {
+  id: number
+  name: string
+  inviteCode: string
 }
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
+  const [gardens, setGardens] = useState<Garden[]>([])
+  const [selectedGardenId, setSelectedGardenId] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -29,17 +41,23 @@ export default function Home() {
   // Image Preview Modal
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
-  useEffect(() => {
-    setUserId(localStorage.getItem('userId'))
-    fetchPosts(1, true)
+  const fetchGardens = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gardens')
+      if (res.ok) {
+        const data = await res.json()
+        setGardens(data)
+      }
+    } catch (error) {
+      console.error('Error fetching gardens:', error)
+    }
   }, [])
 
-  const fetchPosts = async (pageNum: number, isInitial: boolean = false) => {
+  const fetchPosts = useCallback(async (pageNum: number, isInitial: boolean = false, gardenIdOverride?: string) => {
     if (isInitial) setLoading(true)
     else setLoadingMore(true)
 
-    const gid = localStorage.getItem('gardenId')
-    if (!gid) return
+    const gid = gardenIdOverride || selectedGardenId
 
     try {
       const res = await fetch(`/api/posts?page=${pageNum}&gardenId=${gid}`)
@@ -59,6 +77,17 @@ export default function Home() {
       setLoading(false)
       setLoadingMore(false)
     }
+  }, [selectedGardenId])
+
+  useEffect(() => {
+    setUserId(localStorage.getItem('userId'))
+    fetchGardens()
+    fetchPosts(1, true)
+  }, [fetchGardens, fetchPosts])
+
+  const handleGardenChange = (gid: string) => {
+    setSelectedGardenId(gid)
+    fetchPosts(1, true, gid)
   }
 
   const handleLoadMore = () => {
@@ -127,8 +156,25 @@ export default function Home() {
         <p className="mt-2 text-lg text-green-600">看看大家都在种什么</p>
       </div>
 
-      {/* Create Post (Only if logged in) */}
-      {userId && (
+      {/* Filter and Create Post Container */}
+      <div className="flex flex-col gap-4">
+        {/* Garden Filter */}
+        <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow-sm border border-stone-200">
+          <span className="text-sm font-medium text-gray-700">筛选菜园:</span>
+          <select 
+            value={selectedGardenId} 
+            onChange={(e) => handleGardenChange(e.target.value)}
+            className="text-sm border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="all">所有菜园</option>
+            {gardens.map(g => (
+              <option key={g.id} value={g.id}>{g.name || g.inviteCode}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Create Post (Only if logged in) */}
+        {userId && (
         <div className="bg-white rounded-xl shadow-sm p-6 border border-stone-200">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">发布新动态</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -168,6 +214,7 @@ export default function Home() {
           </form>
         </div>
       )}
+      </div>
 
       {/* Feed */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -204,7 +251,12 @@ export default function Home() {
               )}
               <div className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-bold text-gray-900">{post.user.name}</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900">{post.user.name}</span>
+                    <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100 w-fit">
+                      来自: {post.garden.name || post.garden.inviteCode}
+                    </span>
+                  </div>
                   <span className="text-xs text-gray-500">
                     {new Date(post.createdAt).toLocaleDateString()}
                   </span>

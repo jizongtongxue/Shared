@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: Request) {
   try {
@@ -8,14 +9,16 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = 20
 
-    if (!gardenId) {
-      return NextResponse.json({ error: 'Garden ID required' }, { status: 400 })
+    const where: Prisma.PostWhereInput = {}
+    if (gardenId && gardenId !== 'all') {
+      where.gardenId = parseInt(gardenId)
     }
 
     const posts = await prisma.post.findMany({
-      where: { gardenId: parseInt(gardenId) },
+      where,
       include: {
-        user: { select: { name: true } }
+        user: { select: { name: true } },
+        garden: { select: { inviteCode: true, name: true } }
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
