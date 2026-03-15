@@ -50,9 +50,20 @@ export async function generateGardenReminders(gardenId: number) {
           ]
         })
       })
-      const data = await response.json()
-      if (data.choices && data.choices[0]) {
-        suggestions = data.choices[0].message.content.split('\n').filter((s: string) => s.trim().length > 0)
+
+      if (!response.ok) {
+        console.error('DeepSeek API error:', response.status, response.statusText)
+        suggestions = [`检查${crops[0]?.name || '作物'}的土壤`, '清理杂草']
+      } else {
+        try {
+          const data = await response.json()
+          if (data.choices && data.choices[0]) {
+            suggestions = data.choices[0].message.content.split('\n').filter((s: string) => s.trim().length > 0)
+          }
+        } catch (parseError) {
+          console.error('Failed to parse DeepSeek response:', parseError)
+          suggestions = [`检查${crops[0]?.name || '作物'}的土壤`, '清理杂草']
+        }
       }
     } else {
       suggestions = [`检查${crops[0]?.name || '作物'}的土壤`, '清理杂草']

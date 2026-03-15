@@ -108,8 +108,20 @@ export default function Home() {
       if (selectedFiles.length > 0) {
         // Parallel uploads for better performance
         const uploadPromises = selectedFiles.map(async (file) => {
+          let fileToUpload = file
+
+          // Compress image if it's an image and larger than 1MB
+          if (file.type.startsWith('image/') && file.size > 1024 * 1024) {
+            try {
+              const compressedFile = await compressImage(file)
+              fileToUpload = compressedFile
+            } catch (err) {
+              console.error('Image compression failed, uploading original:', err)
+            }
+          }
+
           const formData = new FormData()
-          formData.append('file', file)
+          formData.append('file', fileToUpload)
           
           const uploadRes = await fetch('/api/upload', {
             method: 'POST',
@@ -152,12 +164,69 @@ export default function Home() {
         const errorData = await res.json()
         throw new Error(errorData.error || '发布动态失败')
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating post:', error)
-      alert(error.message || '发布失败，请重试')
+      const errorMessage = error instanceof Error ? error.message : '发布失败，请重试'
+      alert(errorMessage)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Helper function to compress images using Canvas
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          // Max dimensions
+          const MAX_WIDTH = 1600
+          const MAX_HEIGHT = 1600
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                })
+                resolve(compressedFile)
+              } else {
+                reject(new Error('Canvas toBlob failed'))
+              }
+            },
+            'image/jpeg',
+            0.8 // Quality
+          )
+        }
+        img.onerror = reject
+      }
+      reader.onerror = reject
+    })
   }
 
   return (
