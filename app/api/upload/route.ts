@@ -22,7 +22,12 @@ export async function POST(request: Request) {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: 'auto',
-          folder: 'shared-garden', // Optional: keep things organized
+          folder: 'shared-garden',
+          // Auto-resize large images to save bandwidth and memory
+          transformation: [
+            { width: 1200, crop: "limit" }, // Limit width to 1200px
+            { quality: "auto" } // Auto quality optimization
+          ]
         },
         (error, result) => {
           if (error) {

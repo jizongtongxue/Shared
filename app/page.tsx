@@ -106,7 +106,8 @@ export default function Home() {
       let videoUrl: string | undefined = undefined
 
       if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+        // Parallel uploads for better performance
+        const uploadPromises = selectedFiles.map(async (file) => {
           const formData = new FormData()
           formData.append('file', file)
           
@@ -115,15 +116,22 @@ export default function Home() {
             body: formData
           })
           
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json()
-            if (file.type.startsWith('image/')) {
-              imageUrls.push(uploadData.url)
-            } else if (file.type.startsWith('video/')) {
-              videoUrl = uploadData.url
-            }
-          } else {
-            throw new Error('Upload failed')
+          if (!uploadRes.ok) {
+            const errorData = await uploadRes.json()
+            throw new Error(errorData.error || '上传失败')
+          }
+          
+          const uploadData = await uploadRes.json()
+          return { url: uploadData.url, type: file.type }
+        })
+
+        const uploadResults = await Promise.all(uploadPromises)
+        
+        for (const result of uploadResults) {
+          if (result.type.startsWith('image/')) {
+            imageUrls.push(result.url)
+          } else if (result.type.startsWith('video/')) {
+            videoUrl = result.url
           }
         }
       }
@@ -139,12 +147,14 @@ export default function Home() {
         setSelectedFiles([])
         const fileInput = document.getElementById('fileInput') as HTMLInputElement
         if (fileInput) fileInput.value = ''
-        // Reset to first page on new post
         fetchPosts(1, true)
+      } else {
+        const errorData = await res.json()
+        throw new Error(errorData.error || '发布动态失败')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating post:', error)
-      alert('发布失败，请重试')
+      alert(error.message || '发布失败，请重试')
     } finally {
       setSubmitting(false)
     }
