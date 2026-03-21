@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const posts = await prisma.post.findMany({
       where,
       include: {
-        user: { select: { name: true } },
+        user: { select: { id: true, name: true } },
         garden: { select: { inviteCode: true, name: true } }
       },
       orderBy: { createdAt: 'desc' },

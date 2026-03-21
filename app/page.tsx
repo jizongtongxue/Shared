@@ -9,6 +9,7 @@ interface Post {
   videoUrl?: string
   createdAt: string
   user: {
+    id: number
     name: string
   }
   garden: {
@@ -93,6 +94,25 @@ export default function Home() {
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
       fetchPosts(page + 1)
+    }
+  }
+
+  const handleDeletePost = async (id: number) => {
+    if (!confirm('确定要删除这条动态吗？')) return
+
+    try {
+      const res = await fetch(`/api/posts?id=${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        fetchPosts(1, true)
+      } else {
+        const errorData = await res.json()
+        alert(errorData.error || '删除失败')
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('发生错误，请重试')
     }
   }
 
@@ -361,9 +381,19 @@ export default function Home() {
                       来自: {post.garden.name || post.garden.inviteCode}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {new Date(post.createdAt).toLocaleDateString()}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs text-gray-500">
+                      {new Date(post.createdAt).toLocaleDateString()}
+                    </span>
+                    {userId === String(post.user.id) && (
+                      <button 
+                        onClick={() => handleDeletePost(post.id)}
+                        className="text-[10px] text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        删除
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-gray-700 leading-relaxed">{post.content}</p>
               </div>
