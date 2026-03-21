@@ -81,7 +81,9 @@ export default function Home() {
   }, [selectedGardenId])
 
   useEffect(() => {
-    setUserId(localStorage.getItem('userId'))
+    const storedUserId = localStorage.getItem('userId')
+    console.log('Current User ID:', storedUserId)
+    setUserId(storedUserId)
     fetchGardens()
     fetchPosts(1, true)
   }, [fetchGardens, fetchPosts])
