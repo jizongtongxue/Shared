@@ -258,7 +258,7 @@ export default function Home() {
       <div className="text-center py-8">
         <h1 className="text-4xl font-extrabold text-green-800 tracking-tight">村口动态墙</h1>
         <p className="mt-2 text-lg text-green-600">看看大家都在种什么</p>
-        <p className="text-[8px] text-gray-300 mt-1">v1.0.5</p>
+        <p className="text-[8px] text-gray-300 mt-1">v1.0.5 {userId ? `(Logged in: ${userId})` : '(Not logged in)'}</p>
       </div>
 
       {/* Filter and Create Post Container */}
