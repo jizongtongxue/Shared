@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 
 interface Post {
   id: number
@@ -40,7 +40,8 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false)
   
   // Image Preview Modal
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ urls: string[]; index: number } | null>(null)
+  const touchStartXRef = useRef<number | null>(null)
 
   const fetchGardens = useCallback(async () => {
     try {
@@ -97,6 +98,41 @@ export default function Home() {
       fetchPosts(page + 1)
     }
   }
+
+  const openPreview = (urls: string[], index: number) => {
+    if (!urls?.length) return
+    const safeIndex = Math.min(Math.max(index, 0), urls.length - 1)
+    setPreview({ urls, index: safeIndex })
+  }
+
+  const closePreview = () => setPreview(null)
+
+  const goPrev = () => {
+    setPreview((p) => {
+      if (!p) return p
+      const nextIndex = (p.index - 1 + p.urls.length) % p.urls.length
+      return { ...p, index: nextIndex }
+    })
+  }
+
+  const goNext = () => {
+    setPreview((p) => {
+      if (!p) return p
+      const nextIndex = (p.index + 1) % p.urls.length
+      return { ...p, index: nextIndex }
+    })
+  }
+
+  useEffect(() => {
+    if (!preview) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePreview()
+      if (e.key === 'ArrowLeft') goPrev()
+      if (e.key === 'ArrowRight') goNext()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [preview])
 
   const handleDeletePost = async (id: number) => {
     if (!confirm('确定要删除这条动态吗？')) return
@@ -362,7 +398,7 @@ export default function Home() {
                       className={`relative cursor-pointer overflow-hidden aspect-square ${
                         post.imageUrls.length === 1 ? 'aspect-auto max-h-[500px]' : ''
                       }`}
-                      onClick={() => setPreviewImage(url)}
+                      onClick={() => openPreview(post.imageUrls, idx)}
                     >
                       <img
                         src={url}
@@ -419,23 +455,56 @@ export default function Home() {
       )}
 
       {/* Image Preview Modal */}
-      {previewImage && (
+      {preview && (
         <div 
           className="fixed inset-0 bg-black z-[100] flex items-center justify-center p-0"
-          onClick={() => setPreviewImage(null)}
+          onClick={closePreview}
         >
-          <div className="relative w-full h-full flex items-center justify-center">
-            <img 
-              src={previewImage} 
-              alt="Full size preview" 
+          <div 
+            className="relative w-full h-full flex items-center justify-center select-none touch-pan-y"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              touchStartXRef.current = e.touches?.[0]?.clientX ?? null
+            }}
+            onTouchEnd={(e) => {
+              const startX = touchStartXRef.current
+              touchStartXRef.current = null
+              if (startX == null) return
+              const endX = e.changedTouches?.[0]?.clientX ?? startX
+              const delta = endX - startX
+              if (Math.abs(delta) < 40) return
+              if (delta > 0) goPrev()
+              else goNext()
+            }}
+          >
+            <img
+              src={preview.urls[preview.index]}
+              alt="Full size preview"
               className="max-w-full max-h-full object-contain"
             />
-            {/* Close button for mobile accessibility */}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewImage(null);
-              }}
+
+            {preview.urls.length > 1 && (
+              <>
+                <button
+                  onClick={goPrev}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 text-white px-3 py-2 rounded-full hover:bg-black/60"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={goNext}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 text-white px-3 py-2 rounded-full hover:bg-black/60"
+                >
+                  ›
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/40 text-white text-xs px-3 py-1 rounded-full">
+                  {preview.index + 1}/{preview.urls.length}
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={closePreview}
               className="absolute top-4 right-4 bg-black/50 text-white rounded-full p-2 hover:bg-black/70 backdrop-blur-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
