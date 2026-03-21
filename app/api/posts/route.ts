@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+// Last Updated: 2026-03-21 21:55
 
 export async function GET(request: Request) {
   try {
