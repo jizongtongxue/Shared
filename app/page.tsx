@@ -61,7 +61,7 @@ export default function Home() {
     const gid = gardenIdOverride || selectedGardenId
 
     try {
-      const res = await fetch(`/api/posts?page=${pageNum}&gardenId=${gid}`)
+      const res = await fetch(`/api/posts?page=${pageNum}&gardenId=${gid}&t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         if (isInitial) {
@@ -387,7 +387,7 @@ export default function Home() {
                     <span className="text-xs text-gray-500">
                       {new Date(post.createdAt).toLocaleDateString()}
                     </span>
-                    {userId === String(post.user.id) && (
+                    {userId && Number(userId) === post.user.id && (
                       <button 
                         onClick={() => handleDeletePost(post.id)}
                         className="text-[10px] text-red-400 hover:text-red-600 transition-colors"
