@@ -10,14 +10,13 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Check auth status periodically or on mount
     const checkAuth = () => {
       setUserId(localStorage.getItem('userId'))
     }
     checkAuth()
     window.addEventListener('storage', checkAuth)
     return () => window.removeEventListener('storage', checkAuth)
-  }, [])
+  }, [pathname])
 
   if (pathname === '/login') return null
 
