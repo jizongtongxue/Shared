@@ -101,8 +101,10 @@ export default function Home() {
     if (!confirm('确定要删除这条动态吗？')) return
 
     try {
-      const res = await fetch(`/api/posts?id=${id}`, {
-        method: 'DELETE',
+      const res = await fetch('/api/posts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
       })
       if (res.ok) {
         fetchPosts(1, true)
