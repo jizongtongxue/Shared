@@ -25,6 +25,7 @@ interface Garden {
 }
 
 export default function Home() {
+  const deployTag = 'DEPLOY-2026-03-21-01'
   const [posts, setPosts] = useState<Post[]>([])
   const [gardens, setGardens] = useState<Garden[]>([])
   const [selectedGardenId, setSelectedGardenId] = useState<string>('all')
@@ -258,7 +259,10 @@ export default function Home() {
       <div className="text-center py-8">
         <h1 className="text-4xl font-extrabold text-green-800 tracking-tight">村口动态墙</h1>
         <p className="mt-2 text-lg text-green-600">看看大家都在种什么</p>
-        <p className="text-[8px] text-gray-300 mt-1">v1.0.5 {userId ? `(Logged in: ${userId})` : '(Not logged in)'}</p>
+        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs">
+          <span className="font-semibold">{deployTag}</span>
+          <span>{userId ? `已登录 userId=${userId}` : '未登录'}</span>
+        </div>
       </div>
 
       {/* Filter and Create Post Container */}
