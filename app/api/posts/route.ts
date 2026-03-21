@@ -24,7 +24,9 @@ export async function GET(request: Request) {
       skip: (page - 1) * limit,
       take: limit
     })
-    return NextResponse.json(posts)
+    const response = NextResponse.json(posts)
+    response.headers.set('x-version', '1.0.1')
+    return response
   } catch {
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
   }
