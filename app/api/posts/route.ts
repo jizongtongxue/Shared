@@ -64,7 +64,14 @@ export async function POST(request: Request) {
 // Handler for deleting a post
 export async function DELETE(request: Request) {
   try {
-    const { id } = await request.json()
+    const { searchParams } = new URL(request.url)
+    let id = searchParams.get('id')
+
+    if (!id) {
+      const body = await request.json().catch(() => ({}))
+      id = body.id
+    }
+
     if (!id) {
       return NextResponse.json({ error: 'Missing post ID' }, { status: 400 })
     }
