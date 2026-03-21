@@ -57,6 +57,7 @@ export async function POST(request: Request) {
   }
 }
 
+// Handler for deleting a post
 export async function DELETE(request: Request) {
   try {
     const { id } = await request.json()
