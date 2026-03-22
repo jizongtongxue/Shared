@@ -72,10 +72,12 @@ export async function POST(request: Request) {
       {
         action: [
           'name/cos:PutObject',
+          'name/cos:HeadObject',
           'name/cos:InitiateMultipartUpload',
           'name/cos:UploadPart',
           'name/cos:CompleteMultipartUpload',
           'name/cos:AbortMultipartUpload',
+          'name/cos:ListMultipartUploads',
           'name/cos:ListParts',
         ],
         bucket,
