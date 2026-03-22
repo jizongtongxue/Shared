@@ -6,7 +6,7 @@
 
 - Web 全栈：Next.js App Router + React + Tailwind
 - 数据库：PostgreSQL + Prisma
-- 媒体：Cloudinary（上传后返回 URL）
+- 媒体：腾讯云 COS（小程序直传，URL 写入 posts），Cloudinary（历史/兼容）
 - 小程序：WXML/WXSS/JS（`mp-garden/`，默认不推送到 GitHub）
 
 ## 2) 目录结构（简要）
@@ -52,7 +52,7 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-# 腾讯云 COS（直传方案：/api/upload-token）
+# 腾讯云 COS（小程序直传方案：/api/upload-token + 小程序 SDK）
 TENCENT_SECRET_ID=
 TENCENT_SECRET_KEY=
 COS_BUCKET=shared-garden-media-1301483365
@@ -137,10 +137,12 @@ npx prisma migrate reset
 小程序常用能力与对应实现：
 
 - 请求后端：`wx.request`（baseUrl 通常在 `mp-garden/app.js` 的 `globalData`）
-- 上传（直传推荐）：`wx.request` → `/api/upload-token` → COS 直传 → 写入 `posts.imageUrls/videoUrl`
+- 上传（直传推荐）：`wx.request` → `/api/upload-token` → COS 小程序 SDK 上传 → 写入 `posts.imageUrls/videoUrl`
+  - 视频最大 500MB：使用 COS SDK 的分片上传（`sliceUploadFile`），不要用 `putObject` 直接读入内存
 - 上传（兼容/旧）：`wx.uploadFile` → `/api/upload`（Cloudinary）
 - 大图预览：`wx.previewImage`（支持左右滑动浏览图片组）
 - 删除动态：建议调用 `POST /api/posts/delete`（更稳健，避免部分网络对 DELETE 的限制）
+  - 服务器会同步删除 COS 中的图片/视频对象（基于动态的 imageUrls/videoUrl）
 
 服务器域名配置（公众平台“开发设置”）建议至少包含：
 
@@ -151,6 +153,18 @@ npx prisma migrate reset
 - downloadFile 合法域名：
   - COS 默认访问域名（例如 `https://shared-garden-media-1301483365.cos.ap-guangzhou.myqcloud.com`）
   - （若仍保留旧内容）`https://res.cloudinary.com`
+
+## 9) 动态删除与媒体清理（COS）
+
+删除动态接口会在删除数据库记录前，先根据该动态的 `imageUrls[]/videoUrl` 批量删除 COS 对象：
+
+- `POST /api/posts/delete`（小程序/网页使用）
+- `DELETE /api/posts?id=...`（兼容）
+
+要求：
+
+- 线上环境必须配置 `TENCENT_SECRET_ID/TENCENT_SECRET_KEY/COS_BUCKET/COS_REGION`
+- 存储桶建议“公有读私有写”（展示无需签名；写入使用 STS 临时凭证）
 
 ## 8) Railway 部署排查（常用）
 

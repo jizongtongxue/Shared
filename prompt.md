@@ -32,7 +32,8 @@
 - React：`react@19.2.3`
 - Tailwind CSS：`tailwindcss@4`（PostCSS 插件：`@tailwindcss/postcss@^4`）
 - Prisma ORM：`prisma@^5.22.0` + `@prisma/client@^5.22.0`
-- Cloudinary：用于媒体存储/上传（`cloudinary@^2.9.0`）
+- 腾讯云 COS：主要媒体存储（小程序直传，URL 写入 `posts.imageUrls/videoUrl`）
+- Cloudinary：历史/兼容方案（仍保留 `/api/upload` 时使用）
 - lucide-react：图标（用于导航）
 - node-cron：定时任务（AI/提醒相关）
 
@@ -42,7 +43,7 @@
 - 逻辑层：JavaScript（Page/App 结构）
 - 关键能力：
   - 网络请求：`wx.request`
-  - 文件上传：`wx.uploadFile`
+  - 文件上传：COS 小程序 SDK（直传 COS，视频用分片上传）
   - 图片/视频选择：`wx.chooseMedia`
   - 大图预览：`wx.previewImage`（支持左右滑动浏览图片组）
   - 页面路由：`wx.navigateTo` 等
@@ -55,6 +56,8 @@
 - 依赖与脚本：`package.json`
 - Prisma Schema：`prisma/schema.prisma`
 - Prisma Client 封装：`lib/prisma.ts`
+- COS STS：`app/api/upload-token/route.ts`（`qcloud-cos-sts`）
+- COS 删除：`lib/cos-delete.ts`（`cos-nodejs-sdk-v5`）
 
 ***
 
@@ -83,6 +86,8 @@
         route.ts            # 提醒：查询/更新完成状态
       upload/
         route.ts            # 上传：图片/视频
+      upload-token/
+        route.ts            # 上传令牌：签发 COS STS 临时凭证（小程序直传）
     dashboard/
       page.tsx              # 网页：我的菜地
     login/
@@ -96,6 +101,7 @@
     Navbar.tsx              # PC 顶部导航（localStorage 登录态）
   lib/                      # 服务端/通用封装
     ai-scheduler.ts         # 定时任务/调度
+    cos-delete.ts           # 删除动态时同步清理 COS 媒体对象
     prisma.ts               # Prisma Client 单例封装
   prisma/                   # 数据库模型与迁移
     migrations/
@@ -116,6 +122,8 @@
     vercel.svg
     window.svg
   mp-garden/                # 微信小程序（主要客户端；通常不推送 GitHub，微信开发者工具上传）
+    lib/
+      cos-wx-sdk-v5.js      # COS 小程序 SDK（直传/分片上传）
     pages/                  # 小程序页面
       dashboard/
         dashboard.js        # 菜地页逻辑（含退出）
@@ -176,6 +184,7 @@
 - 展示动态列表（可按菜园筛选）
 - 发布动态：文字 + 多媒体（图片/视频）
 - 删除动态：仅对发布者显示（逻辑在前端做权限展示；后端需进一步加鉴权则另行实现）
+  - 删除时会同步删除腾讯云 COS 中的图片/视频对象（根据该动态的 `imageUrls/videoUrl` 解析 Key 后批量删除）
 - 图片预览（大图/左右切换）：
   - 网页：弹层预览 + 左右切换/滑动
   - 小程序：`wx.previewImage` 打开大图并左右滑动
@@ -204,13 +213,14 @@
 
 ### 4.4 上传
 
-- 前端发起 `/api/upload` 上传媒体，返回 URL
-- 动态记录里保存 `imageUrls[]` 和 `videoUrl`
+- 小程序（推荐）：`/api/upload-token` 获取 STS → COS SDK 直传（视频最大 500MB 用分片上传）→ 写入 `posts.imageUrls/videoUrl`
+- 网页（兼容）：`/api/upload`（Cloudinary）或自行接入 COS 直传
+- 动态记录里保存 `imageUrls[]` 和 `videoUrl`（完整 URL）
 
 入口：
 
-- 网页：`app/api/upload/route.ts`（前端用 `fetch` + `FormData`）
-- 小程序：`wx.uploadFile` 上传到 `/api/upload`
+- 网页：`app/api/upload/route.ts`（Cloudinary，中转上传）
+- 小程序直传：`app/api/upload-token/route.ts`（签发 STS）+ `mp-garden/lib/cos-wx-sdk-v5.js`
 
 ***
 
@@ -256,6 +266,15 @@
 - 优先排查：
   - 公众平台「服务器域名」加入媒体域名（例如 Cloudinary 的 `https://res.cloudinary.com`）
   - 使用手机热点对比验证网络问题
+
+### 6.5 COS 直传/视频上传失败（小程序）
+
+- 直传链路：`/api/upload-token` → COS SDK 上传（视频建议 `sliceUploadFile` 分片上传）
+- 常见原因：
+  - 没有在公众平台配置 `uploadFile/downloadFile` 合法域名为 COS 默认域名
+  - STS policy 缺少分片上传权限（Initiate/UploadPart/Complete/Abort/ListParts/HeadObject 等）
+  - STS 有效期太短导致上传中途过期（视频建议更长有效期）
+  - 过高并发分片导致弱网失败（建议 `ChunkParallel=1` 起步）
 
 ***
 
