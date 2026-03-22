@@ -165,11 +165,80 @@ export default function Home() {
       let videoUrl: string | undefined = undefined
 
       if (selectedFiles.length > 0) {
-        // Parallel uploads for better performance
+        const uploadToCos = async (file: File) => {
+          const tokenRes = await fetch('/api/upload-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              filename: file.name,
+              contentType: file.type,
+              fileSize: file.size,
+            })
+          })
+
+          const tokenData = await tokenRes.json().catch(() => ({}))
+          if (!tokenRes.ok) {
+            throw new Error(tokenData.error || '获取上传凭证失败')
+          }
+
+          const COSMod = await import('cos-js-sdk-v5')
+          const COS: any = (COSMod as any).default || COSMod
+          const cos = new COS({
+            getAuthorization: (_options: any, callback: (auth: any) => void) => {
+              callback({
+                TmpSecretId: tokenData.credentials.tmpSecretId,
+                TmpSecretKey: tokenData.credentials.tmpSecretKey,
+                SecurityToken: tokenData.credentials.sessionToken,
+                StartTime: tokenData.credentials.startTime,
+                ExpiredTime: tokenData.credentials.expiredTime,
+              })
+            }
+          })
+
+          const isVideo = file.type.startsWith('video/')
+          const useSlice = isVideo || file.size > 20 * 1024 * 1024
+
+          await new Promise<void>((resolve, reject) => {
+            if (useSlice) {
+              cos.sliceUploadFile(
+                {
+                  Bucket: tokenData.bucket,
+                  Region: tokenData.region,
+                  Key: tokenData.key,
+                  Body: file,
+                  ContentType: file.type,
+                  ChunkSize: isVideo ? 2 * 1024 * 1024 : 5 * 1024 * 1024,
+                  AsyncLimit: isVideo ? 1 : 2,
+                },
+                (err: any) => {
+                  if (err) reject(err)
+                  else resolve()
+                }
+              )
+            } else {
+              cos.putObject(
+                {
+                  Bucket: tokenData.bucket,
+                  Region: tokenData.region,
+                  Key: tokenData.key,
+                  Body: file,
+                  ContentType: file.type,
+                },
+                (err: any) => {
+                  if (err) reject(err)
+                  else resolve()
+                }
+              )
+            }
+          })
+
+          return tokenData.publicUrl as string
+        }
+
         const uploadPromises = selectedFiles.map(async (file) => {
           let fileToUpload = file
 
-          // Compress image if it's an image and larger than 1MB
           if (file.type.startsWith('image/') && file.size > 1024 * 1024) {
             try {
               const compressedFile = await compressImage(file)
@@ -179,21 +248,8 @@ export default function Home() {
             }
           }
 
-          const formData = new FormData()
-          formData.append('file', fileToUpload)
-          
-          const uploadRes = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-          })
-          
-          if (!uploadRes.ok) {
-            const errorData = await uploadRes.json()
-            throw new Error(errorData.error || '上传失败')
-          }
-          
-          const uploadData = await uploadRes.json()
-          return { url: uploadData.url, type: file.type }
+          const url = await uploadToCos(fileToUpload)
+          return { url, type: fileToUpload.type }
         })
 
         const uploadResults = await Promise.all(uploadPromises)
