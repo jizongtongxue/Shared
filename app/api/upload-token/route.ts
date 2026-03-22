@@ -36,7 +36,7 @@ function buildKey(ext: string, contentType?: string | null) {
 
 export async function POST(request: Request) {
   try {
-    const { userId, filename, contentType } = await request.json().catch(() => ({}))
+    const { userId, filename, contentType, fileSize } = await request.json().catch(() => ({}))
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
@@ -51,12 +51,33 @@ export async function POST(request: Request) {
     const region = getEnv('COS_REGION')
     const publicBaseUrl = getEnv('COS_PUBLIC_BASE_URL').replace(/\/$/, '')
 
+    const ctLower = (contentType || '').toLowerCase()
+    const isVideo = ctLower.startsWith('video/')
+
+    if (typeof fileSize === 'number' && Number.isFinite(fileSize)) {
+      const maxVideoBytes = 500 * 1024 * 1024
+      const maxImageBytes = 20 * 1024 * 1024
+      if (isVideo && fileSize > maxVideoBytes) {
+        return NextResponse.json({ error: 'Video too large (max 500MB)' }, { status: 413 })
+      }
+      if (!isVideo && fileSize > maxImageBytes) {
+        return NextResponse.json({ error: 'Image too large (max 20MB)' }, { status: 413 })
+      }
+    }
+
     const ext = inferExt(filename, contentType)
     const key = buildKey(ext, contentType)
 
     const policy = getPolicy([
       {
-        action: ['name/cos:PutObject'],
+        action: [
+          'name/cos:PutObject',
+          'name/cos:InitiateMultipartUpload',
+          'name/cos:UploadPart',
+          'name/cos:CompleteMultipartUpload',
+          'name/cos:AbortMultipartUpload',
+          'name/cos:ListParts',
+        ],
         bucket,
         region,
         prefix: key,
