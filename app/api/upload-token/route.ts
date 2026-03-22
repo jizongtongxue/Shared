@@ -86,10 +86,14 @@ export async function POST(request: Request) {
       },
     ])
 
+    const durationSeconds = isVideo
+      ? 7200
+      : 1800
+
     const { credentials, startTime, expiredTime } = await getCredential({
       secretId: getEnv('TENCENT_SECRET_ID'),
       secretKey: getEnv('TENCENT_SECRET_KEY'),
-      durationSeconds: 900,
+      durationSeconds,
       policy,
     })
 
