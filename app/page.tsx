@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { formatDateTime } from '@/lib/datetime'
 
 interface Post {
   id: number
@@ -478,7 +479,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-xs text-gray-500">
-                      {new Date(post.createdAt).toLocaleDateString()}
+                      {formatDateTime(post.createdAt)}
                     </span>
                     {userId && Number(userId) === post.user.id && (
                       <button 

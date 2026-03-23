@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatDateTime } from '@/lib/datetime'
 
 interface Crop {
   id: number
@@ -134,7 +135,7 @@ export default function Dashboard() {
           </button>
           {lastCheckIn && (
             <div className="mt-2">
-              <p className="text-xs text-gray-400">上次打卡: {new Date(lastCheckIn.createdAt).toLocaleString()}</p>
+              <p className="text-xs text-gray-400">上次打卡: {formatDateTime(lastCheckIn.createdAt)}</p>
               <p className="text-[10px] text-blue-400">打卡人: {lastCheckIn.user.name}</p>
             </div>
           )}
